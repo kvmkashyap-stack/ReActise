@@ -223,13 +223,12 @@ export default function Home() {
   interface ChatSession {
     id: string;
     title: string;
-    tool: "agent" | "github" | "codex";
     messages: Message[];
   }
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [currentTool, setCurrentTool] = useState<"agent" | "github" | "codex">("agent");
+
   const [editingMsgIdx, setEditingMsgIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
@@ -357,9 +356,8 @@ export default function Home() {
         if (savedSessions) {
           const parsed = JSON.parse(savedSessions);
           setSessions(parsed);
-          if (parsed.length > 0) {
+          if (parsed && parsed.length > 0) {
             setCurrentSessionId(parsed[0].id);
-            setCurrentTool(parsed[0].tool);
             setMessages(parsed[0].messages);
           }
         }
@@ -552,7 +550,6 @@ export default function Home() {
     const session = sessions.find((s) => s.id === sessionId);
     if (session) {
       setCurrentSessionId(sessionId);
-      setCurrentTool(session.tool);
       setMessages(session.messages);
       setCurrentTrace([]);
       setExpandedTraceIdx(null);
@@ -568,7 +565,6 @@ export default function Home() {
     if (currentSessionId === sessionId) {
       if (updated.length > 0) {
         setCurrentSessionId(updated[0].id);
-        setCurrentTool(updated[0].tool);
         setMessages(updated[0].messages);
       } else {
         handleNewChat();
@@ -631,7 +627,6 @@ export default function Home() {
       const newSession: ChatSession = {
         id: activeSessionId,
         title: newTitle,
-        tool: currentTool,
         messages: updatedMessages
       };
       updatedSessions = [newSession, ...sessions];
@@ -656,13 +651,7 @@ export default function Home() {
     ]);
 
     try {
-      // Append tool prefix context to steers planner instructions
       let promptText = userMessage;
-      if (currentTool === "github") {
-        promptText = `[GitHub Agent Workspace] ${userMessage}`;
-      } else if (currentTool === "codex") {
-        promptText = `[Codex Code Refactor] ${userMessage}`;
-      }
 
       // Convert history to payload schema
       const historyPayload = messages.map((m) => ({
@@ -699,7 +688,7 @@ export default function Home() {
         role: "assistant",
         content: "",
         trace: [],
-        active_specialist: currentTool === "github" ? "octolyzer" : currentTool === "codex" ? "synthex" : "nexus",
+        active_specialist: "nexus",
       };
 
       setMessages([...updatedMessages, assistantMsg]);
@@ -800,11 +789,6 @@ export default function Home() {
 
     try {
       let promptText = editText;
-      if (currentTool === "github") {
-        promptText = `[GitHub Agent Workspace] ${editText}`;
-      } else if (currentTool === "codex") {
-        promptText = `[Codex Code Refactor] ${editText}`;
-      }
 
       const historyPayload = truncatedHistory.map((m) => ({
         role: m.role,
@@ -840,7 +824,7 @@ export default function Home() {
         role: "assistant",
         content: "",
         trace: [],
-        active_specialist: currentTool === "github" ? "octolyzer" : currentTool === "codex" ? "synthex" : "nexus",
+        active_specialist: "nexus",
       };
 
       setMessages([...updatedMessages, assistantMsg]);
@@ -1175,70 +1159,70 @@ export default function Home() {
           {landingTab === "features" && (
             <div className="space-y-12">
               <div className="text-center space-y-3">
-                <h2 className="text-3xl font-extrabold text-github-text font-sans">Meet Your AI Engineering Team</h2>
+                <h2 className="text-3xl font-extrabold text-github-text font-sans">Meet Your Unified AI Engineering Team</h2>
                 <p className="text-sm text-github-muted max-w-lg mx-auto font-sans">
-                  Three specialized agents, each designed for a different dimension of software development.
+                  Just ask. ReActise dynamically routes your request to the perfect specialized agent.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Nexus */}
-                <div className="group p-6 bg-github-panel border border-github-border rounded-xl space-y-4 text-left shadow-sm hover:border-[#6366f1]/40 hover:shadow-lg hover:shadow-[#6366f1]/5 transition-all duration-300 font-sans relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#6366f1]/10 to-transparent rounded-bl-full pointer-events-none" />
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#6366f1] to-[#a855f7] flex items-center justify-center text-white shadow-md shadow-purple-500/20">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-extrabold text-github-text tracking-tight">Nexus</h3>
-                    <p className="text-[10px] font-bold text-[#6366f1] uppercase tracking-wider mt-0.5">General AI Companion</p>
-                  </div>
-                  <p className="text-xs text-github-muted leading-relaxed">
-                    Your all-purpose AI developer assistant. Ask anything — from debugging logic errors to explaining complex architectures, writing documentation, or brainstorming solutions. Nexus understands context, remembers conversations, and adapts to your coding style.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#6366f1]/10 text-[#6366f1] rounded-full border border-[#6366f1]/20">Planning</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#6366f1]/10 text-[#6366f1] rounded-full border border-[#6366f1]/20">Debugging</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#6366f1]/10 text-[#6366f1] rounded-full border border-[#6366f1]/20">Docs</span>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
+                <div className="group p-8 bg-github-panel border border-github-border rounded-xl space-y-6 text-left shadow-sm hover:border-[#6366f1]/40 hover:shadow-lg transition-all duration-300 font-sans relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#6366f1]/5 to-transparent rounded-bl-full pointer-events-none" />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {/* Nexus */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#6366f1] to-[#a855f7] flex items-center justify-center text-white">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-github-text">Nexus</h4>
+                          <span className="text-[9px] font-bold text-[#6366f1] uppercase tracking-wider">General AI</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-github-muted leading-relaxed">
+                        Handles planning, brainstorming, and conversational tasks. Bypasses heavy tools for instant responses.
+                      </p>
+                    </div>
 
-                {/* Octolyzer */}
-                <div className="group p-6 bg-github-panel border border-github-border rounded-xl space-y-4 text-left shadow-sm hover:border-[#f59e0b]/40 hover:shadow-lg hover:shadow-[#f59e0b]/5 transition-all duration-300 font-sans relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#f59e0b]/10 to-transparent rounded-bl-full pointer-events-none" />
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#ef4444] flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-                    <GitBranch className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-extrabold text-github-text tracking-tight">Octolyzer</h3>
-                    <p className="text-[10px] font-bold text-[#f59e0b] uppercase tracking-wider mt-0.5">GitHub Intelligence Agent</p>
-                  </div>
-                  <p className="text-xs text-github-muted leading-relaxed">
-                    Paste any public GitHub URL and Octolyzer clones it, indexes every file into vector stores, and builds a semantic map of your entire codebase. Navigate directory trees, trace import chains, discover API endpoints, and analyze test coverage — all through natural language.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#f59e0b]/10 text-[#f59e0b] rounded-full border border-[#f59e0b]/20">Cloning</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#f59e0b]/10 text-[#f59e0b] rounded-full border border-[#f59e0b]/20">Indexing</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#f59e0b]/10 text-[#f59e0b] rounded-full border border-[#f59e0b]/20">RAG Search</span>
-                  </div>
-                </div>
+                    {/* Octolyzer */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#f59e0b] to-[#ef4444] flex items-center justify-center text-white">
+                          <GitBranch className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-github-text">Octolyzer</h4>
+                          <span className="text-[9px] font-bold text-[#f59e0b] uppercase tracking-wider">GitHub Agent</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-github-muted leading-relaxed">
+                        Clones repositories, indexes files into vector stores, and performs deep semantic RAG searches.
+                      </p>
+                    </div>
 
-                {/* Synthex */}
-                <div className="group p-6 bg-github-panel border border-github-border rounded-xl space-y-4 text-left shadow-sm hover:border-[#10b981]/40 hover:shadow-lg hover:shadow-[#10b981]/5 transition-all duration-300 font-sans relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#10b981]/10 to-transparent rounded-bl-full pointer-events-none" />
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#10b981] to-[#06b6d4] flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-                    <Code2 className="w-6 h-6" />
+                    {/* Synthex */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#10b981] to-[#06b6d4] flex items-center justify-center text-white">
+                          <Code2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-github-text">Synthex</h4>
+                          <span className="text-[9px] font-bold text-[#10b981] uppercase tracking-wider">Code Engine</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-github-muted leading-relaxed">
+                        Generates, refactors, and validates production-ready code with built-in AST checking and retry loops.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-extrabold text-github-text tracking-tight">Synthex</h3>
-                    <p className="text-[10px] font-bold text-[#10b981] uppercase tracking-wider mt-0.5">Code Synthesis Engine</p>
-                  </div>
-                  <p className="text-xs text-github-muted leading-relaxed">
-                    Purpose-built for high-fidelity code generation and refactoring. Synthex writes production-ready code, applies targeted fixes, converts between languages, and validates every edit through AST compilation gates — ensuring zero syntax errors before delivery.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#10b981]/10 text-[#10b981] rounded-full border border-[#10b981]/20">Refactor</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#10b981]/10 text-[#10b981] rounded-full border border-[#10b981]/20">Generate</span>
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#10b981]/10 text-[#10b981] rounded-full border border-[#10b981]/20">AST Verify</span>
+                  
+                  <div className="pt-4 border-t border-github-border/50 text-center">
+                    <p className="text-sm font-semibold text-github-text">
+                      No manual toggles required. The ReAct Supervisor automatically delegates your tasks to the right specialist.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1544,46 +1528,18 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Tool Selection List */}
+            {/* Tool Selection List (Removed in favor of unified chat) */}
             <div className="p-3 border-b border-github-border space-y-1 select-none">
               <span className="block text-[10px] font-bold text-github-muted uppercase tracking-wider pl-2 pb-1.5 font-sans">
-                Active Tools
+                Active System
               </span>
-              {/* Tool 1: The Agent */}
-              <button
-                onClick={() => setCurrentTool("agent")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors cursor-pointer text-left font-sans ${currentTool === "agent" ? "bg-github-bg text-github-agent border border-github-border" : "text-github-muted hover:bg-github-bg/50 hover:text-github-text border border-transparent"}`}
-              >
+              <div className="w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors text-left font-sans bg-github-bg text-github-text border border-github-border cursor-default">
                 <Sparkles className="w-4 h-4 shrink-0 text-github-agent" />
                 <div className="flex flex-col min-w-0">
-                  <span className="font-semibold leading-tight text-github-text">Nexus</span>
-                  <span className="text-[10px] text-github-muted/80 font-normal mt-0.5">General AI Assistant</span>
+                  <span className="font-semibold leading-tight text-github-text">ReActise AI</span>
+                  <span className="text-[10px] text-github-muted/80 font-normal mt-0.5">Unified Intelligence</span>
                 </div>
-              </button>
-
-              {/* Tool 2: The GitHub Agent */}
-              <button
-                onClick={() => setCurrentTool("github")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors cursor-pointer text-left font-sans ${currentTool === "github" ? "bg-github-bg text-github-agent border border-github-border" : "text-github-muted hover:bg-github-bg/50 hover:text-github-text border border-transparent"}`}
-              >
-                <GitBranch className="w-4 h-4 shrink-0 text-github-agent" />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-semibold leading-tight text-github-text">Octolyzer</span>
-                  <span className="text-[10px] text-github-muted/80 font-normal mt-0.5">GitHub Intelligence</span>
-                </div>
-              </button>
-
-              {/* Tool 3: The Codex */}
-              <button
-                onClick={() => setCurrentTool("codex")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors cursor-pointer text-left font-sans ${currentTool === "codex" ? "bg-github-bg text-github-agent border border-github-border" : "text-github-muted hover:bg-github-bg/50 hover:text-github-text border border-transparent"}`}
-              >
-                <Code2 className="w-4 h-4 shrink-0 text-github-agent" />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-semibold leading-tight text-github-text">Synthex</span>
-                  <span className="text-[10px] text-github-muted/80 font-normal mt-0.5">Code Intelligence</span>
-                </div>
-              </button>
+              </div>
             </div>
 
             {/* New Chat Button */}
@@ -1617,13 +1573,7 @@ export default function Home() {
                       className={`group flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer relative ${isActive ? "bg-github-bg border border-github-border text-github-text" : "text-github-muted hover:bg-github-bg/40 hover:text-github-text"}`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        {session.tool === "github" ? (
-                          <GitBranch className="w-3.5 h-3.5 shrink-0 text-github-muted" />
-                        ) : session.tool === "codex" ? (
-                          <Code2 className="w-3.5 h-3.5 shrink-0 text-github-muted" />
-                        ) : (
-                          <Sparkles className="w-3.5 h-3.5 shrink-0 text-github-muted" />
-                        )}
+                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-github-muted" />
                         
                         {isRenaming ? (
                           <input
@@ -1774,71 +1724,24 @@ export default function Home() {
             {/* Chat Header showing active Tool context */}
             <div className="hidden md:flex px-6 py-3 bg-github-panel border-b border-github-border items-center justify-between select-none">
               <div className="flex items-center gap-2.5 font-sans">
-                {currentTool === "github" ? (
-                  <GitBranch className="w-4 h-4 text-github-agent" />
-                ) : currentTool === "codex" ? (
-                  <Code2 className="w-4 h-4 text-github-agent" />
-                ) : (
-                  <Sparkles className="w-4 h-4 text-github-agent" />
-                )}
+                <Sparkles className="w-4 h-4 text-github-agent animate-pulse" />
                 <div>
                   <h3 className="text-sm font-bold text-github-text">
-                    {currentTool === "github"
-                      ? "Octolyzer"
-                      : currentTool === "codex"
-                      ? "Synthex"
-                      : "Nexus"}
+                    ReActise System
                   </h3>
                   <p className="text-[10px] text-github-muted">
-                    {currentTool === "github"
-                      ? "Deep codebase intelligence — parse, index & navigate any repository"
-                      : currentTool === "codex"
-                      ? "Precision code synthesis — refactor, generate & verify with AST gates"
-                      : "Your multi-modal AI developer companion — plan, build & ship faster"}
+                    Intelligent routing to General, GitHub, and Code specialists based on your query
                   </p>
                 </div>
               </div>
+            </div>
               
               {/* Active Workspace Status indicator */}
               {activeRepos.length > 0 && (
                 <div className="flex items-center gap-1.5 bg-github-bg border border-github-border px-2.5 py-1 rounded-md text-[10px] text-github-muted font-mono">
                   <Database className="w-3.5 h-3.5 text-github-success" />
-                  <span>Workspace: {activeRepos[0]}</span>
                 </div>
               )}
-            </div>
-
-            {/* Inline Config Drawer when GitHub Agent is selected */}
-            {currentTool === "github" && (
-              <div className="px-6 py-2.5 bg-github-panel/60 border-b border-github-border flex flex-col md:flex-row gap-3 items-center justify-between select-none transition-all duration-200">
-                <div className="flex items-center gap-1.5 text-xs text-github-muted font-sans font-semibold">
-                  <GithubIcon className="w-4 h-4 text-github-text shrink-0" />
-                  <span>Repository URL:</span>
-                </div>
-                <form onSubmit={handleIndexGithub} className="flex-1 max-w-lg flex items-center gap-2 w-full">
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://github.com/user/repo"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                    className="flex-1 px-2.5 py-1 text-xs bg-github-bg border border-github-border rounded focus:outline-none focus:border-github-link text-github-text"
-                  />
-                  <button
-                    type="submit"
-                    disabled={indexingLoading}
-                    className="px-3.5 py-1 text-xs font-semibold text-white bg-github-success hover:bg-[#2c973e] rounded cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 font-sans"
-                  >
-                    {indexingLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Index repo"}
-                  </button>
-                </form>
-                {indexingStatus && (
-                  <span className="text-[10px] font-mono text-github-muted bg-github-bg px-2 py-0.5 border border-github-border rounded max-w-xs truncate">
-                    {indexingStatus}
-                  </span>
-                )}
-              </div>
-            )}
 
             {/* Messages History Container */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
@@ -1849,81 +1752,29 @@ export default function Home() {
                   </div>
                   <div className="space-y-1.5 font-sans">
                     <h2 className="text-xl font-bold text-github-text">
-                      {currentTool === "github"
-                        ? "What repo should we explore?"
-                        : currentTool === "codex"
-                        ? "What code should we build?"
-                        : "How can I help you today?"}
+                      How can I help you today?
                     </h2>
                     <p className="text-xs text-github-muted leading-relaxed">
-                      {currentTool === "github"
-                        ? "Paste a GitHub URL or ask about repository files, directory layouts, and dependency trees."
-                        : currentTool === "codex"
-                        ? "Describe a feature, paste a code snippet, or request a precision refactor with compile verification."
-                        : "Ask anything — from quick questions to full codebase analysis and code generation."}
+                      Ask anything — from quick planning questions, to cloning GitHub repos, to generating full production-ready features. ReActise dynamically delegates to the right agent.
                     </p>
                   </div>
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 font-sans">
-                    {currentTool === "agent" && (
-                      <>
-                        <button onClick={() => setInput("Explain how async/await works in Python with examples.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Explain async/await in Python</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Write a REST API endpoint for user registration with validation.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Build a registration endpoint</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Identify if my workspace code compiles correctly.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Check code compilation</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Review my project structure and suggest improvements.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Review project structure</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                      </>
-                    )}
-                    {currentTool === "github" && (
-                      <>
-                        <button onClick={() => setInput("Index https://github.com/langchain-ai/langgraph and show me the directory tree.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Clone & explore LangGraph</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Show the imports and dependencies across all Python files.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Map file dependencies</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Find all API endpoints defined in this repository.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Discover all API routes</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Analyze the test coverage and suggest missing test cases.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Analyze test coverage</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                      </>
-                    )}
-                    {currentTool === "codex" && (
-                      <>
-                        <button onClick={() => setInput("Refactor auth_service.py to use bcrypt for password hashing.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Refactor with bcrypt hashing</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Generate a complete CRUD module for a Todo app with FastAPI.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Generate CRUD module</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Add comprehensive error handling and input validation to my API.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Add error handling</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                        <button onClick={() => setInput("Convert this JavaScript file to TypeScript with proper types.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
-                          <span>Convert JS → TypeScript</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-github-agent shrink-0" />
-                        </button>
-                      </>
-                    )}
+                    <button onClick={() => setInput("Explain how async/await works in Python with examples.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
+                      <span>Explain async/await in Python</span>
+                      <Sparkles className="w-3.5 h-3.5 text-[#6366f1] shrink-0" />
+                    </button>
+                    <button onClick={() => setInput("Clone https://github.com/fastapi/fastapi and analyze the project structure.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
+                      <span>Clone & explore FastAPI</span>
+                      <GitBranch className="w-3.5 h-3.5 text-[#f59e0b] shrink-0" />
+                    </button>
+                    <button onClick={() => setInput("Write a REST API endpoint for user registration with validation.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
+                      <span>Build a registration endpoint</span>
+                      <Code2 className="w-3.5 h-3.5 text-[#10b981] shrink-0" />
+                    </button>
+                    <button onClick={() => setInput("Refactor my authentication module to use bcrypt hashing.")} className="p-3 bg-github-panel hover:bg-github-border/60 border border-github-border rounded-xl text-left text-xs text-github-muted hover:text-github-text transition-all cursor-pointer flex items-center justify-between gap-2">
+                      <span>Refactor auth module</span>
+                      <Code2 className="w-3.5 h-3.5 text-[#10b981] shrink-0" />
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -2086,30 +1937,14 @@ export default function Home() {
                     <div className="flex gap-3 w-full select-none">
                       <div className="shrink-0 mt-1">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 select-none overflow-hidden">
-                          {currentTool === "github" ? (
-                            <div className="w-full h-full bg-gradient-to-br from-[#f59e0b] to-[#ef4444] flex items-center justify-center">
-                              <GitBranch className="w-4 h-4 text-white" />
-                            </div>
-                          ) : currentTool === "codex" ? (
-                            <div className="w-full h-full bg-gradient-to-br from-[#10b981] to-[#06b6d4] flex items-center justify-center">
-                              <Code2 className="w-4 h-4 text-white" />
-                            </div>
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-[#6366f1] to-[#a855f7] flex items-center justify-center">
-                              <Sparkles className="w-4 h-4 text-white" />
-                            </div>
-                          )}
+                          <div className="w-full h-full bg-gradient-to-br from-[#6366f1] to-[#a855f7] flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 text-white" />
+                          </div>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-github-text mb-1 font-sans flex items-center gap-1.5">
-                          {currentTool === "github" ? (
-                            <>🌿 <span className="text-[#f59e0b]">Octolyzer (GitHub Intelligence)</span></>
-                          ) : currentTool === "codex" ? (
-                            <>💻 <span className="text-[#10b981]">Synthex (Code Intelligence)</span></>
-                          ) : (
-                            <>✨ <span className="text-[#a855f7]">Nexus (General AI Assistant)</span></>
-                          )}
+                          ✨ <span className="text-github-text">ReActise System Thinking...</span>
                         </p>
                         <div className="flex items-center gap-2.5 text-sm text-github-muted font-sans">
                           <Loader2 className="w-4 h-4 animate-spin text-github-agent" />
@@ -2198,13 +2033,7 @@ export default function Home() {
                           }
                         }
                       }}
-                      placeholder={
-                        currentTool === "github"
-                          ? "Ask about repository structure or file details..."
-                          : currentTool === "codex"
-                          ? "Paste code file or request code refactors..."
-                          : "Message ReActise..."
-                      }
+                      placeholder="Message ReActise..."
                       rows={Math.min(5, input.split('\n').length)}
                       className="w-full bg-transparent px-3 py-1.5 text-sm text-github-text placeholder-github-muted focus:outline-none font-sans resize-none max-h-32 overflow-y-auto"
                     />
