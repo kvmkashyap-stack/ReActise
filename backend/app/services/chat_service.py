@@ -218,9 +218,19 @@ Conversation History:
     }
 
     # Execute LangGraph and retrieve final result
-    result = await asyncio.to_thread(react_agent.invoke, initial_state)
+    try:
+        result = await asyncio.to_thread(react_agent.invoke, initial_state)
+    except Exception as agent_err:
+        print(f"[chat_service] ReAct agent execution failed: {agent_err}")
+        import traceback
+        traceback.print_exc()
+        error_msg = f"⚠️ The agent encountered an error while processing your request:\n\n```\n{str(agent_err)}\n```\n\nPlease try again or rephrase your query."
+        yield f"data: {json.dumps({'type': 'trace', 'emoji': '❌', 'label': 'Agent Error', 'details': str(agent_err)})}\n\n"
+        yield f"data: {json.dumps({'type': 'token', 'content': error_msg})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'active_specialist': 'nexus', 'tools_used': []})}\n\n"
+        return
 
-    final_answer = result.get("final_answer", "")
+    final_answer = result.get("final_answer") or result.get("draft_answer") or ""
     verifier_feedback = result.get("verifier_feedback")
 
     # Map steps and tools used
@@ -278,6 +288,9 @@ Conversation History:
         final_answer = final_answer + audit_footer
 
     # Smooth character chunk streaming of the final answer (typing simulation)
+    if not final_answer:
+        final_answer = "I processed your request but was unable to generate a response. Please try again with more details."
+
     chunk_size = 12
     for i in range(0, len(final_answer), chunk_size):
         chunk = final_answer[i:i+chunk_size]
