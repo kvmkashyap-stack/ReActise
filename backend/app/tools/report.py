@@ -1,8 +1,6 @@
 from pathlib import Path
 
 from langchain_core.tools import tool
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate
 
 
 @tool
@@ -13,6 +11,12 @@ def generate_pdf_report(
     """
     Generate a PDF report from text.
     """
+    try:
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate
+    except ImportError as e:
+        print(f"[report] Failed to load reportlab: {e}")
+        raise RuntimeError("Local PDF report generation is not supported. Please configure required libraries.") from e
 
     output = Path(output_path)
 
