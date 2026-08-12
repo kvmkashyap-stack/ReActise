@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-github-bg: var(--github-bg);
+  --color-github-panel: var(--github-panel);
+  --color-github-border: var(--github-border);
+  --color-github-text: var(--github-text);
+  --color-github-muted: var(--github-muted);
+  --color-github-link: var(--github-link);
+  --color-github-success: var(--github-success);
+  --color-github-agent: var(--github-agent);
+  --color-github-error: var(--github-error);
+  --color-github-warning: var(--github-warning);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+}
+
+:root {
+  /* Premium Light Theme (Soft slate backgrounds, crisp borders, and deep violet/blue accents) */
+  --github-bg: #f8fafc;
+  --github-panel: #ffffff;
+  --github-border: #e2e8f0;
+  --github-text: #0f172a;
+  --github-muted: #64748b;
+  --github-link: #2563eb;
+  --github-success: #16a34a;
+  --github-agent: #7c3aed;
+  --github-error: #dc2626;
+  --github-warning: #d97706;
+}
+
+html.dark {
+  /* GitHub Dark Theme */
+  --github-bg: #0d1117;
+  --github-panel: #161b22;
+  --github-border: #30363d;
+  --github-text: #f0f6fc;
+  --github-muted: #8b949e;
+  --github-link: #58a6ff;
+  --github-success: #2ea043;
+  --github-agent: #a371f7;
+  --github-error: #f85149;
+  --github-warning: #d29922;
+}
+
+body {
+  background-color: var(--color-github-bg);
+  color: var(--color-github-text);
+  font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Premium mesh-grid backgrounds for visual depth */
+.mesh-grid {
+  background-size: 24px 24px;
+}
+html:not(.dark) .mesh-grid {
+  background-image: radial-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px);
+}
+html.dark .mesh-grid {
+  background-image: radial-gradient(rgba(163, 113, 247, 0.035) 1px, transparent 1px);
+}
+
+/* Custom scrollbars matching theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--github-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--github-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--github-muted);
+}

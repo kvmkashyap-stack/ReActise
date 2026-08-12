@@ -1,0 +1,43 @@
+# IDE / OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment variables & secrets (CRITICAL!)
+.env
+.env.*
+*.env
+backend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Python files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+.tox/
+.coverage
+.cache
+.pytest_cache/
+
+# Node.js
+**/node_modules/
+npm-debug.log*
+.next/
+out/
+build/
+dist/
+
+# Application Specific storage / cache
+**/workspaces/
+**/uploads/
+**/reports/

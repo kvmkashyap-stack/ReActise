@@ -1,0 +1,7 @@
+- [ ] Implement parallel tool execution in `executor.py`
+- [ ] Implement fast-path classifier & context limit (max 4 messages) in `chat_service.py`
+- [ ] Implement asynchronous `chat_stream_generator` in `chat_service.py`
+- [ ] Register `POST /chat/stream` route in `chat_router.py`
+- [ ] Replace input element with auto-expanding textarea in `page.tsx`
+- [ ] Implement SSE readable stream decoding in frontend `page.tsx`
+- [ ] Run build check and run dev server verification
