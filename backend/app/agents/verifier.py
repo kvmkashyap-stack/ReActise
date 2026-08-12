@@ -22,9 +22,9 @@ def verifier_node(state: AgentState) -> AgentState:
     # Store structured output in state
     state["verifier_feedback"] = result
 
-    if result.approved:
-        state["final_answer"] = state["draft_answer"]
-    else:
-        state["final_answer"] = result.feedback
+    # Always use the draft answer (which contains the actual code/content).
+    # If rejected, the retry loop will go back to executor to improve it.
+    # On final exit (max retries), the user still gets the best draft, not criticism.
+    state["final_answer"] = state["draft_answer"]
 
-    return state
+    return state

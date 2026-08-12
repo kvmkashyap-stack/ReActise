@@ -13,11 +13,99 @@ from app.schemas.memory import MemoryCreate
 from app.services.document_service import list_user_documents
 
 
+def _get_active_repos_from_db(user_id: str) -> list[str]:
+    """
+    Fallback: query Supabase documents table for indexed repo names
+    when the local workspace directory is missing (serverless/Vercel).
+    """
+    try:
+        from app.core.supabase import supabase
+        response = (
+            supabase
+            .table("documents")
+            .select("metadata")
+            .execute()
+        )
+        repo_names = set()
+        for row in response.data or []:
+            meta = row.get("metadata") or {}
+            if meta.get("user_id") == user_id and meta.get("repo_name"):
+                repo_names.add(meta["repo_name"])
+        return list(repo_names)
+    except Exception as e:
+        print(f"[chat_service] Supabase repo lookup failed: {e}")
+        return []
+
+
+def _ensure_workspace_exists(user_id: str, repo_names: list[str]) -> list[str]:
+    """
+    If repos are indexed in Supabase but missing on local disk,
+    attempt to re-clone them using the stored repo_url metadata.
+    Returns the list of repos that are available on disk.
+    """
+    available = []
+    for repo_name in repo_names:
+        workspace_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name)
+        if os.path.exists(workspace_dir) and os.listdir(workspace_dir):
+            available.append(repo_name)
+            continue
+
+        # Try to find repo_url from Supabase metadata and re-clone
+        try:
+            from app.core.supabase import supabase
+            response = (
+                supabase
+                .table("documents")
+                .select("metadata")
+                .limit(1)
+                .execute()
+            )
+            repo_url = None
+            for row in response.data or []:
+                meta = row.get("metadata") or {}
+                if (
+                    meta.get("user_id") == user_id
+                    and meta.get("repo_name") == repo_name
+                    and meta.get("repo_url")
+                ):
+                    repo_url = meta["repo_url"]
+                    break
+
+            if repo_url:
+                from app.tools.github_loader import load_repository
+                load_repository(repo_url, clone_to_dir=workspace_dir)
+                available.append(repo_name)
+                print(f"[chat_service] Re-cloned '{repo_name}' from {repo_url}")
+        except Exception as e:
+            print(f"[chat_service] Failed to re-clone '{repo_name}': {e}")
+    return available
+
+
+def _resolve_active_repos(user_id: str) -> list[str]:
+    """
+    Resolve active repositories: check local disk first, fall back to Supabase.
+    """
+    user_workspaces_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id)
+    active_repos = []
+    if os.path.exists(user_workspaces_dir):
+        active_repos = [
+            d for d in os.listdir(user_workspaces_dir)
+            if os.path.isdir(os.path.join(user_workspaces_dir, d))
+        ]
+
+    # If local disk is empty, check Supabase for indexed repos
+    if not active_repos:
+        db_repos = _get_active_repos_from_db(user_id)
+        if db_repos:
+            active_repos = _ensure_workspace_exists(user_id, db_repos)
+
+    return active_repos
+
+
 def is_nexus_fast_path(message: str) -> bool:
     """
-    Returns True if the prompt is a simple greeting, conceptual theory query,
-    or does not reference file modifications or github repositories.
-    Bypasses supervisor/planner overhead for rapid responses.
+    Returns True if the prompt is a simple greeting or conceptual theory query.
+    Returns False for anything that may require tools, code generation, or file ops.
     """
     msg_lower = message.lower()
 
@@ -25,11 +113,24 @@ def is_nexus_fast_path(message: str) -> bool:
     if "github.com/" in msg_lower or "repo" in msg_lower or "clone" in msg_lower:
         return False
 
-    # If it references workspace code modifications, it requires Synthex
-    if any(k in msg_lower for k in ["write", "fix", "modify", "edit", "refactor", "syntax", "ast"]):
+    # If it references code generation, workspace ops, or analysis → Slow Path
+    code_keywords = [
+        # Synthex: code writing / modifications
+        "write", "fix", "modify", "edit", "refactor", "syntax", "ast",
+        "generate", "create", "implement", "build", "code", "develop",
+        "script", "program", "function", "class", "algorithm",
+        # Synthex: debugging / testing
+        "debug", "bug", "error", "compile", "test", "optimize",
+        # Octolyzer: file/repo analysis
+        "analyze", "structure", "index", "readme", "files", "list",
+        "search", "find", "look up", "retrieve", "fetch",
+        # Report generation
+        "report", "pdf", "summarize", "document",
+    ]
+    if any(k in msg_lower for k in code_keywords):
         return False
 
-    # Greetings
+    # Greetings (exact match only)
     greetings = ["hey", "hello", "hi", "yo", "sup", "greetings", "good morning", "good afternoon"]
     if any(msg_lower.strip() == g for g in greetings):
         return True
@@ -39,10 +140,7 @@ def is_nexus_fast_path(message: str) -> bool:
     if any(k in msg_lower for k in conceptual_keywords):
         return True
 
-    # Default: if it's very short, it's Nexus conversation
-    if len(message.split()) < 5:
-        return True
-
+    # Default: go through the full agent pipeline (safer than assuming Nexus)
     return False
 
 
@@ -99,14 +197,8 @@ Conversation History:
         return
 
     # 4. Slow Path (Full ReAct Graph with Task Decomposer)
-    # Find active workspaces on disk
-    user_workspaces_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id)
-    active_repos = []
-    if os.path.exists(user_workspaces_dir):
-        active_repos = [
-            d for d in os.listdir(user_workspaces_dir)
-            if os.path.isdir(os.path.join(user_workspaces_dir, d))
-        ]
+    # Find active workspaces (local disk first, then Supabase fallback)
+    active_repos = _resolve_active_repos(user_id)
 
     uploaded_files = list_user_documents(user_id)
     uploaded_files_str = ", ".join(uploaded_files) if uploaded_files else "None"
@@ -219,13 +311,7 @@ def chat_with_agent(
         history_lines.append(f"{role}: {msg['content']}")
     formatted_history = "\n".join(history_lines)
 
-    user_workspaces_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id)
-    active_repos = []
-    if os.path.exists(user_workspaces_dir):
-        active_repos = [
-            d for d in os.listdir(user_workspaces_dir)
-            if os.path.isdir(os.path.join(user_workspaces_dir, d))
-        ]
+    active_repos = _resolve_active_repos(user_id)
 
     uploaded_files = list_user_documents(user_id)
     uploaded_files_str = ", ".join(uploaded_files) if uploaded_files else "None"

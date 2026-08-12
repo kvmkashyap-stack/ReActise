@@ -37,9 +37,10 @@ def analyze_repository(
         # Clone and load code files as LangChain Documents
         result = load_repository(repo_url, clone_to_dir=workspace_dir)
 
-        # Attach repo name metadata to documents
+        # Attach repo name and URL metadata to documents
         for doc in result:
             doc.metadata["repo_name"] = repo_name
+            doc.metadata["repo_url"] = repo_url
 
         # Index in vector store under the user's ID
         vector_store.add_documents(result, user_id=user_id)
