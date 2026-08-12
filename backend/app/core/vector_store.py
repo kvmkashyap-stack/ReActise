@@ -1,4 +1,4 @@
-from langchain_community.vectorstores import SupabaseVectorStore, FAISS
+from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.documents import Document
 
 from app.core.embeddings import embeddings  # Imports HuggingFace embeddings instance
@@ -35,6 +35,15 @@ class VectorStore:
             print(f"[vector_store] Supabase VectorStore init failed: {e}. Falling back to FAISS.")
 
     def _get_local_store(self, documents: list[Document] = None):
+        try:
+            from langchain_community.vectorstores import FAISS
+        except Exception as e:
+            print(f"[vector_store] FAISS loading failed: {e}")
+            raise RuntimeError(
+                "Local FAISS vector store is not supported on this environment. "
+                "Please configure Supabase Vector Store settings to enable document RAG indexing."
+            ) from e
+
         if self._local_store is None:
             if documents:
                 self._local_store = FAISS.from_documents(documents, embeddings)
