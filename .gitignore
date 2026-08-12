@@ -9,7 +9,8 @@ Thumbs.db
 .env.*
 *.env
 backend/.env
-frontend/.env.local
+# Allow frontend/.env.local (public backend URL only, no secrets)
+!frontend/.env.local
 frontend/.env.development.local
 frontend/.env.test.local
 frontend/.env.production.local
