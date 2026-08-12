@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -19,7 +20,8 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
-    UPLOAD_FOLDER: str = "./uploads"
+    UPLOAD_FOLDER: str = "/tmp/uploads" if os.path.exists("/tmp") else "./uploads"
+    WORKSPACES_FOLDER: str = "/tmp/workspaces" if os.path.exists("/tmp") else "./workspaces"
 
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""

@@ -100,7 +100,7 @@ Conversation History:
 
     # 4. Slow Path (Full ReAct Graph with Task Decomposer)
     # Find active workspaces on disk
-    user_workspaces_dir = os.path.join("workspaces", user_id)
+    user_workspaces_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id)
     active_repos = []
     if os.path.exists(user_workspaces_dir):
         active_repos = [
@@ -219,7 +219,7 @@ def chat_with_agent(
         history_lines.append(f"{role}: {msg['content']}")
     formatted_history = "\n".join(history_lines)
 
-    user_workspaces_dir = os.path.join("workspaces", user_id)
+    user_workspaces_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id)
     active_repos = []
     if os.path.exists(user_workspaces_dir):
         active_repos = [

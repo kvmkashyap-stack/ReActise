@@ -2,6 +2,7 @@ import os
 import ast
 import json
 from langchain_core.tools import tool
+from app.core.config import settings
 
 
 @tool
@@ -13,7 +14,7 @@ def list_workspace_files(
     List all file paths available in the cloned repository workspace.
     Use this to see the structure of the repository.
     """
-    workspace_dir = os.path.join("workspaces", user_id, repo_name)
+    workspace_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name)
     if not os.path.exists(workspace_dir):
         return [f"Workspace for repo '{repo_name}' not found."]
 
@@ -42,7 +43,7 @@ def read_workspace_file(
     Use this to inspect code, analyze files, and find bugs.
     """
     safe_path = os.path.normpath(file_path).lstrip("/\\")
-    full_path = os.path.join("workspaces", user_id, repo_name, safe_path)
+    full_path = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name, safe_path)
 
     if not os.path.exists(full_path) or not os.path.isfile(full_path):
         return f"File '{file_path}' not found in workspace."
@@ -66,7 +67,7 @@ def write_workspace_file(
     Use this to save code corrections, write fixes, or create new files.
     """
     safe_path = os.path.normpath(file_path).lstrip("/\\")
-    full_path = os.path.join("workspaces", user_id, repo_name, safe_path)
+    full_path = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name, safe_path)
 
     try:
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
@@ -89,7 +90,7 @@ def check_code_syntax(
     Use this to verify if code corrections are free of syntax errors.
     """
     safe_path = os.path.normpath(file_path).lstrip("/\\")
-    full_path = os.path.join("workspaces", user_id, repo_name, safe_path)
+    full_path = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name, safe_path)
 
     if not os.path.exists(full_path) or not os.path.isfile(full_path):
         return f"File '{file_path}' not found in workspace."

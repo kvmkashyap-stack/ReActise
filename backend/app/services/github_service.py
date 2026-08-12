@@ -8,6 +8,7 @@ from app.tools.github_loader import load_repository
 from app.core.vector_store import vector_store
 
 
+from app.core.config import settings
 import os
 from urllib.parse import urlparse
 
@@ -31,7 +32,7 @@ def analyze_repository(
         repo_name = path_parts[-1].replace(".git", "")
 
         # Target local workspace directory
-        workspace_dir = os.path.join("workspaces", user_id, repo_name)
+        workspace_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name)
 
         # Clone and load code files as LangChain Documents
         result = load_repository(repo_url, clone_to_dir=workspace_dir)
