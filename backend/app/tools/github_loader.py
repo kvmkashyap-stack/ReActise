@@ -6,7 +6,6 @@ import zipfile
 import io
 import httpx
 
-from git import Repo
 from langchain_core.documents import Document
 
 
@@ -30,6 +29,8 @@ def load_repository(
 
     # Try Git Clone first
     try:
+        os.environ["GIT_PYTHON_REFRESH"] = "quiet"
+        from git import Repo
         Repo.clone_from(
             repository_url,
             temp_dir,
