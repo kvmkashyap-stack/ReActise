@@ -45,8 +45,15 @@ def root():
 
 @app.get("/health")
 def health_check():
-
+    try:
+        from app.core.supabase import supabase
+        # Ping the DB to prevent Supabase from auto-pausing due to inactivity
+        supabase.table("conversation_memory").select("user_id").limit(1).execute()
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"disconnected ({str(e)})"
+        
     return {
-        "status":
-        "healthy"
+        "status": "healthy",
+        "database": db_status
     }
