@@ -1,4 +1,4 @@
-from supabase import Client, create_client
+from supabase import Client, create_client, ClientOptions
 from app.core.config import settings
 
 if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
@@ -7,4 +7,5 @@ if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
 supabase: Client = create_client(
     settings.SUPABASE_URL,
     settings.SUPABASE_KEY,
+    options=ClientOptions(persist_session=False)
 )
