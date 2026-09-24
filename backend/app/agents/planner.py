@@ -46,14 +46,23 @@ def planner_node(state: AgentState) -> AgentState:
     current_plan = state.get("plan", [])
     observations = state.get("observations", [])
 
-    response = planner_chain.invoke(
-        {
-            "user_goal": user_goal,
-            "current_plan": str(current_plan),
-            "observations": str(observations[-3:]) if observations else "None",
-            "uploaded_files": state.get("uploaded_files", "None"),
-        }
-    )
+    try:
+        response = planner_chain.invoke(
+            {
+                "user_goal": user_goal,
+                "current_plan": str(current_plan),
+                "observations": str(observations[-3:]) if observations else "None",
+                "uploaded_files": state.get("uploaded_files", "None"),
+            }
+        )
+        plan_dicts = [step.dict() for step in response.plan]
+        thought_str = response.thought
+        active_spec = response.active_specialist
+    except Exception as e:
+        print(f"[planner_node] Structured output failed: {e}. Falling back to default plan.")
+        plan_dicts = [{"step": 1, "task": f"Process request: {user_goal}", "status": "pending", "tool": "answer"}]
+        thought_str = "Generated default execution plan."
+        active_spec = "nexus"
 
     # Convert ExplicitPlanResponse to dict list format for state
     plan_dicts = [step.dict() for step in response.plan]
@@ -94,9 +103,9 @@ def planner_node(state: AgentState) -> AgentState:
     
     # Store legacy plan object alongside state dict plan if needed
     state["legacy_plan"] = PlannerResponse(
-        thought=response.thought,
+        thought=thought_str,
         steps=legacy_tool_calls,
-        active_specialist=response.active_specialist
+        active_specialist=active_spec if active_spec in ["nexus", "octolyzer", "synthex"] else "nexus"
     )
 
     return state
