@@ -64,9 +64,6 @@ def planner_node(state: AgentState) -> AgentState:
         thought_str = "Generated default execution plan."
         active_spec = "nexus"
 
-    # Convert ExplicitPlanResponse to dict list format for state
-    plan_dicts = [step.dict() for step in response.plan]
-
     # Preserve completed statuses if re-planning
     if current_plan and isinstance(current_plan, list):
         completed_map = {p["step"]: p["status"] for p in current_plan if isinstance(p, dict) and p.get("status") == "completed"}
