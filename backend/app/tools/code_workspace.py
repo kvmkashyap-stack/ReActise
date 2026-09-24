@@ -113,5 +113,54 @@ def check_code_syntax(
         return f"Syntax Error in '{file_path}': line {se.lineno}, col {se.offset}: {se.msg}\nCode line: {se.text}"
     except json.JSONDecodeError as jde:
         return f"JSON Format Error in '{file_path}': line {jde.lineno}, col {jde.colno}: {jde.msg}"
-    except Exception as e:
         return f"Validation Error in '{file_path}': {str(e)}"
+
+
+@tool
+def execute_workspace_command(
+    user_id: str,
+    repo_name: str,
+    command: str,
+) -> str:
+    """
+    Execute a shell or test command in the workspace directory (e.g. 'pytest', 'python -m unittest', 'npm test').
+    Returns stdout, stderr, exit code, and success boolean as a JSON string.
+    """
+    import subprocess
+
+    workspace_dir = os.path.join(settings.WORKSPACES_FOLDER, user_id, repo_name)
+    if not os.path.exists(workspace_dir):
+        workspace_dir = settings.WORKSPACES_FOLDER
+        os.makedirs(workspace_dir, exist_ok=True)
+
+    try:
+        res = subprocess.run(
+            command,
+            shell=True,
+            cwd=workspace_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        output_dict = {
+            "success": res.returncode == 0,
+            "exit_code": res.returncode,
+            "stdout": res.stdout[:2000] if res.stdout else "",
+            "stderr": res.stderr[:2000] if res.stderr else "",
+        }
+        return json.dumps(output_dict)
+    except subprocess.TimeoutExpired:
+        return json.dumps({
+            "success": False,
+            "exit_code": -1,
+            "stdout": "",
+            "stderr": "Command execution timed out after 30 seconds."
+        })
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "exit_code": -1,
+            "stdout": "",
+            "stderr": f"Execution error: {str(e)}"
+        })
+

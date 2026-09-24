@@ -197,25 +197,15 @@ Conversation History:
         return
 
     # 4. Slow Path (Full ReAct Graph with Task Decomposer)
-    # Find active workspaces (local disk first, then Supabase fallback)
     active_repos = _resolve_active_repos(user_id)
-
     uploaded_files = list_user_documents(user_id)
     uploaded_files_str = ", ".join(uploaded_files) if uploaded_files else "None"
 
-    initial_state = {
-        "user_id": user_id,
-        "question": request.message,
-        "chat_history": formatted_history,
-        "active_repos": active_repos,
-        "uploaded_files": uploaded_files_str,
-        "retry_count": 0,
-        "context": "",
-        "tool_output": "",
-        "draft_answer": "",
-        "final_answer": "",
-        "verifier_feedback": None,
-    }
+    from app.agents.state import create_initial_state
+    initial_state = create_initial_state(question=request.message, user_id=user_id)
+    initial_state["chat_history"] = formatted_history
+    initial_state["active_repos"] = active_repos
+    initial_state["uploaded_files"] = uploaded_files_str
 
     # Execute LangGraph and retrieve final result
     try:
@@ -230,64 +220,21 @@ Conversation History:
         yield f"data: {json.dumps({'type': 'done', 'active_specialist': 'nexus', 'tools_used': []})}\n\n"
         return
 
-    final_answer = result.get("final_answer") or result.get("draft_answer") or ""
-    verifier_feedback = result.get("verifier_feedback")
+    final_answer = result.get("final_response") or result.get("final_answer") or result.get("draft_answer") or ""
 
-    # Map steps and tools used
-    active_specialist = "nexus"
-    tools_used = []
-    if result.get("plan"):
-        plan = result["plan"]
-        active_specialist = plan.active_specialist
-        spec_label = "Nexus" if active_specialist == "nexus" else "Octolyzer" if active_specialist == "octolyzer" else "Synthex"
-        emoji = "✨" if active_specialist == "nexus" else "🌿" if active_specialist == "octolyzer" else "💻"
+    # Map trace steps from execution_log
+    active_specialist = result.get("active_agent", "nexus")
+    tools_used = [res.get("tool") for res in result.get("tool_results", []) if res.get("tool")]
 
-        yield f"data: {json.dumps({'type': 'trace', 'emoji': emoji, 'label': f'Routing to {spec_label}', 'details': plan.thought})}\n\n"
+    exec_logs = result.get("execution_log", [])
+    for log_item in exec_logs:
+        ag = log_item.get("agent", "agent")
+        emoji = "✨" if ag in ["nexus", "planner"] else "🌿" if ag == "octolyzer" else "💻" if ag == "synthex" else "🧪" if ag == "validator" else "🧠"
+        label = f"[{ag.upper()}] {log_item.get('action')}"
+        details = f"{log_item.get('observation')} (Result: {log_item.get('result')})"
+        yield f"data: {json.dumps({'type': 'trace', 'emoji': emoji, 'label': label, 'details': details})}\n\n"
         await asyncio.sleep(0.05)
 
-        for step in plan.steps:
-            if step.action == "final_answer":
-                continue
-            tools_used.append(step.action)
-
-            tool_emoji = "🔍" if step.action == "list_files" else "📄" if step.action == "read_file" else "💾" if step.action == "write_file" else "🧪" if step.action == "check_syntax" else "🔎" if step.action == "rag" else "🌐" if step.action == "web_search" else "📦" if step.action == "github" else "⚙️"
-            tool_label = f"Executing {step.action}"
-
-            yield f"data: {json.dumps({'type': 'trace', 'emoji': tool_emoji, 'label': tool_label, 'details': step.reason})}\n\n"
-            await asyncio.sleep(0.05)
-
-    if tools_used:
-        yield f"data: {json.dumps({'type': 'trace', 'emoji': '🧠', 'label': 'Synthesizing output', 'details': 'Assembling final response.'})}\n\n"
-        await asyncio.sleep(0.05)
-
-    # Verifier Audits Check
-    if verifier_feedback and tools_used:
-        status = "passed" if verifier_feedback.approved else "failed"
-        emoji = "✅" if verifier_feedback.approved else "⚠️"
-        score_str = f" [Score: {verifier_feedback.confidence_score}/100]" if hasattr(verifier_feedback, "confidence_score") else ""
-        reasons_list = verifier_feedback.reasons if hasattr(verifier_feedback, "reasons") and verifier_feedback.reasons else [verifier_feedback.feedback]
-        reasons_str = "; ".join(reasons_list)
-
-        yield f"data: {json.dumps({'type': 'trace', 'emoji': emoji, 'label': f'Verification {status}{score_str}', 'details': reasons_str})}\n\n"
-        await asyncio.sleep(0.05)
-
-        score_val = verifier_feedback.confidence_score if hasattr(verifier_feedback, "confidence_score") else 0
-        actions_list = verifier_feedback.actions_taken if hasattr(verifier_feedback, "actions_taken") and verifier_feedback.actions_taken else tools_used
-        actions_md = ", ".join([f"`{a}`" for a in actions_list]) if actions_list else "`None`"
-        reasons_bullets = "\n".join([f"- {r}" for r in reasons_list])
-
-        audit_footer = f"""
-
----
-### 🛡️ ReAct Verification Audit
-- **Confidence Score**: `{score_val}/100`
-- **Actions Evaluated**: {actions_md}
-- **Verification Reasoning**:
-{reasons_bullets}
-"""
-        final_answer = final_answer + audit_footer
-
-    # Smooth character chunk streaming of the final answer (typing simulation)
     if not final_answer:
         final_answer = "I processed your request but was unable to generate a response. Please try again with more details."
 
