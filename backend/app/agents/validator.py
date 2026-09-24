@@ -3,6 +3,15 @@ from app.agents.state import AgentState
 from app.tools.code_workspace import execute_workspace_command
 
 
+def call_tool_safe(tool_obj, args_dict):
+    if hasattr(tool_obj, "invoke"):
+        return tool_obj.invoke(args_dict)
+    elif hasattr(tool_obj, "func") and callable(tool_obj.func):
+        return tool_obj.func(**args_dict)
+    else:
+        return tool_obj(**args_dict)
+
+
 def validator_node(state: AgentState) -> AgentState:
     """
     Validator Node: Specialist for Executing Tests & Commands to Validate Changes.
@@ -14,8 +23,8 @@ def validator_node(state: AgentState) -> AgentState:
 
     success = False
     try:
-        raw_res = execute_workspace_command(user_id=user_id, repo_name=repo_name, command=command)
-        res_dict = json.loads(raw_res)
+        raw_res = call_tool_safe(execute_workspace_command, {"user_id": user_id, "repo_name": repo_name, "command": command})
+        res_dict = json.loads(str(raw_res)) if isinstance(raw_res, str) else raw_res
         success = res_dict.get("success", False)
         stdout = res_dict.get("stdout", "")
         stderr = res_dict.get("stderr", "")
@@ -28,7 +37,6 @@ def validator_node(state: AgentState) -> AgentState:
     state.get("observations", []).append(f"[Validator - execute_command]: {observation[:1500]}")
     state.get("tool_results", []).append({"tool": "execute_command", "result": observation[:1500], "success": success})
 
-    # Update plan status for current step
     current_step = state.get("current_step", 1)
     plan = state.get("plan", [])
     for p in plan:

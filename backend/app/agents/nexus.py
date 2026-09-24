@@ -1,14 +1,26 @@
 from app.agents.state import AgentState
+from app.core.llm import llm
 from app.tools.web_search import web_search
 from app.tools.retriever import retrieve_context
 from app.tools.report import generate_pdf_report
+from langchain_core.messages import SystemMessage, HumanMessage
+
+
+def call_tool_safe(tool_obj, args_dict):
+    """Safely invoke a LangChain StructuredTool or standard function."""
+    if hasattr(tool_obj, "invoke"):
+        return tool_obj.invoke(args_dict)
+    elif hasattr(tool_obj, "func") and callable(tool_obj.func):
+        return tool_obj.func(**args_dict)
+    else:
+        return tool_obj(**args_dict)
 
 
 def nexus_node(state: AgentState) -> AgentState:
     """
     Nexus Node: Specialist for Knowledge, Search & Reasoning.
     """
-    tool_name = state.get("selected_tool", "rag")
+    tool_name = str(state.get("selected_tool", "rag")).lower()
     question = state.get("question", "")
     user_id = state.get("user_id", "")
 
@@ -16,14 +28,27 @@ def nexus_node(state: AgentState) -> AgentState:
     success = True
 
     try:
-        if tool_name == "web_search":
-            observation = str(web_search.invoke({"query": question}))
+        if tool_name in ["answer", "conversational", "reasoning", "greeting", "none"]:
+            # Direct LLM conversational response
+            res = llm.invoke([
+                SystemMessage(content="You are Nexus, the friendly AI assistant of ReActise. Respond warmly and concisely to the user."),
+                HumanMessage(content=question)
+            ])
+            observation = res.content
+        elif tool_name == "web_search":
+            observation = str(call_tool_safe(web_search, {"query": question}))
         elif tool_name == "report":
             draft = state.get("draft_answer", "Summary Report")
-            observation = str(generate_pdf_report({"report_text": draft, "output_path": "reports/report.pdf"}))
+            observation = str(call_tool_safe(generate_pdf_report, {"report_text": draft, "output_path": "reports/report.pdf"}))
+        elif tool_name == "rag":
+            observation = str(call_tool_safe(retrieve_context, {"query": question, "user_id": user_id}))
         else:
-            # Default to RAG
-            observation = str(retrieve_context(query=question, user_id=user_id))
+            # Fallback to direct conversational answer
+            res = llm.invoke([
+                SystemMessage(content="You are Nexus, the AI assistant of ReActise. Provide a helpful response to the user's inquiry."),
+                HumanMessage(content=question)
+            ])
+            observation = res.content
     except Exception as e:
         observation = f"Error in Nexus execution: {str(e)}"
         success = False

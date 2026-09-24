@@ -2,11 +2,20 @@ from app.agents.state import AgentState
 from app.tools.code_workspace import write_workspace_file, check_code_syntax
 
 
+def call_tool_safe(tool_obj, args_dict):
+    if hasattr(tool_obj, "invoke"):
+        return tool_obj.invoke(args_dict)
+    elif hasattr(tool_obj, "func") and callable(tool_obj.func):
+        return tool_obj.func(**args_dict)
+    else:
+        return tool_obj(**args_dict)
+
+
 def synthex_node(state: AgentState) -> AgentState:
     """
     Synthex Node: Specialist for Code Modification & Editing.
     """
-    tool_name = state.get("selected_tool", "write_file")
+    tool_name = str(state.get("selected_tool", "write_file")).lower()
     user_id = state.get("user_id", "")
     repos = state.get("active_repos", [])
     repo_name = repos[0] if repos else ""
@@ -18,7 +27,7 @@ def synthex_node(state: AgentState) -> AgentState:
 
     try:
         if tool_name == "check_syntax":
-            observation = check_code_syntax(user_id=user_id, repo_name=repo_name, file_path=file_path)
+            observation = str(call_tool_safe(check_code_syntax, {"user_id": user_id, "repo_name": repo_name, "file_path": file_path}))
             if "Syntax Error" in observation or "Format Error" in observation:
                 success = False
         else:
@@ -26,12 +35,12 @@ def synthex_node(state: AgentState) -> AgentState:
                 observation = "Error: Cannot write file without specifying file_path."
                 success = False
             else:
-                observation = write_workspace_file(
-                    user_id=user_id,
-                    repo_name=repo_name,
-                    file_path=file_path,
-                    content=content
-                )
+                observation = str(call_tool_safe(write_workspace_file, {
+                    "user_id": user_id,
+                    "repo_name": repo_name,
+                    "file_path": file_path,
+                    "content": content
+                }))
     except Exception as e:
         observation = f"Error in Synthex execution: {str(e)}"
         success = False
@@ -39,7 +48,6 @@ def synthex_node(state: AgentState) -> AgentState:
     state.get("observations", []).append(f"[Synthex - {tool_name}]: {observation[:1500]}")
     state.get("tool_results", []).append({"tool": tool_name, "result": observation[:1500], "success": success})
 
-    # Update plan status for current step
     current_step = state.get("current_step", 1)
     plan = state.get("plan", [])
     for p in plan:
