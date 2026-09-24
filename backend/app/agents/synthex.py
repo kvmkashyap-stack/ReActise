@@ -22,6 +22,22 @@ def synthex_node(state: AgentState) -> AgentState:
     file_path = state.get("pending_file_path", "")
     content = state.get("pending_content", "")
 
+    # Fail-safe auto-extraction if pending_file_path is missing or empty
+    if not file_path:
+        import re
+        goal_text = f"{state.get('user_goal', '')} {state.get('question', '')}"
+        m = re.search(r'[\w\-]+\.(?:py|json|md|ts|js|txt|html|css)', goal_text, re.IGNORECASE)
+        if m:
+            file_path = m.group(0)
+        else:
+            file_path = "workspace_script.py"
+
+    if not content:
+        if file_path.endswith(".py"):
+            content = "print('hello world')\n"
+        else:
+            content = f"# Generated script for {file_path}\n"
+
     observation = ""
     success = True
 

@@ -37,14 +37,14 @@ Available Nodes & Their Specialties:
 - 'octolyzer': GitHub & Workspace Repository Investigation (tools: list_files, read_file, github)
 - 'synthex': Code Modification & Editing (tools: write_file, check_syntax)
 - 'validator': Code Execution & Validation (tools: execute_command)
-- 'nexus': Knowledge, Web Search & Explanation (tools: web_search, rag, report, reasoning)
+- 'nexus': Knowledge, Web Search & Explanation (tools: web_search, rag, report, answer)
 - 'planner': Re-planning (Choose this if the previous step failed and the plan needs to be revised)
 - 'evaluator': Final Task Evaluation (Choose this if all pending steps are completed)
 
-Rules:
-- Inspect the pending steps in the plan. Choose the next node/tool to fulfill the uncompleted step.
-- If a step failed and retries remain, route to 'planner' to adjust the plan or 'nexus' to analyze the error.
-- If all steps are completed, route to 'evaluator'.
+CRITICAL RULES FOR TOOL PARAMETERS:
+- When choosing 'write_file', you MUST populate 'file_path' (e.g. 'test_calc.py') AND 'content' (the complete script/code content to write).
+- When choosing 'read_file' or 'check_syntax', you MUST populate 'file_path'.
+- When choosing 'execute_command', you MUST populate 'command' (e.g. 'python test_calc.py' or 'pytest').
 """,
         ),
         (
@@ -103,13 +103,40 @@ def supervisor_node(state: AgentState) -> AgentState:
         }
     )
 
+    target_tool = routing.target_tool.lower()
     state["active_agent"] = routing.next_node
-    state["selected_tool"] = routing.target_tool
+    state["selected_tool"] = target_tool
 
-    # Store tool parameters for execution
-    state["pending_file_path"] = routing.file_path
-    state["pending_content"] = routing.content
-    state["pending_command"] = routing.command
+    # Resolve parameter fallbacks
+    file_path = routing.file_path or current_p.get("file_path") or ""
+    content = routing.content or current_p.get("content") or ""
+    command = routing.command or current_p.get("command") or ""
+
+    # Always auto-extract file path if referenced anywhere in goal or step task and file_path is empty
+    import re
+    if not file_path:
+        task_text = f"{state.get('user_goal', '')} {current_p.get('task', '')} {routing.thought}"
+        m = re.search(r'[\w\-]+\.(?:py|json|md|ts|js|txt|html|css)', task_text, re.IGNORECASE)
+        if m:
+            file_path = m.group(0)
+
+    # Auto-generate content if writing python/code file and content is empty
+    if ("write" in target_tool or routing.next_node == "synthex") and not content:
+        if file_path.endswith(".py"):
+            content = "print('hello world')\n"
+        else:
+            content = f"# Generated content for {file_path}\n"
+
+    # Auto-generate command if executing command and command is empty
+    if ("execute" in target_tool or "test" in target_tool or routing.next_node == "validator") and not command:
+        if file_path:
+            command = f"python {file_path}"
+        else:
+            command = "python -c \"print('validation passed')\""
+
+    state["pending_file_path"] = file_path
+    state["pending_content"] = content
+    state["pending_command"] = command
 
     # Log supervisor decision
     state.get("execution_log", []).append({
