@@ -32,11 +32,34 @@ def synthex_node(state: AgentState) -> AgentState:
         else:
             file_path = "workspace_script.py"
 
-    if not content:
-        if file_path.endswith(".py"):
-            content = "print('hello world')\n"
-        else:
-            content = f"# Generated script for {file_path}\n"
+    if not content or content == "print('hello world')\n":
+        from app.core.llm import llm
+        from langchain_core.messages import SystemMessage, HumanMessage
+
+        sys_prompt = """
+You are Synthex, the Code Intelligence Specialist of ReActise.
+Your job is to produce 100% valid, error-free, properly-indented code based on the user's request and observations.
+
+Rules:
+1. Ensure proper 4-space indentation for Python code blocks.
+2. Fix any syntax errors, missing indentation, or logical bugs present in the prompt.
+3. Return ONLY raw executable code (no introductory text or prose).
+"""
+        code_res = llm.invoke([
+            SystemMessage(content=sys_prompt),
+            HumanMessage(content=f"User Goal: {state.get('user_goal', state.get('question', ''))}\nTask Context: {state.get('question')}\nRecent Observations: {state.get('observations', [])}")
+        ])
+
+        raw_code = str(code_res.content).strip()
+        if raw_code.startswith("```"):
+            lines = raw_code.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            raw_code = "\n".join(lines)
+
+        content = raw_code
 
     observation = ""
     success = True

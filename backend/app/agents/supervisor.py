@@ -120,13 +120,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         if m:
             file_path = m.group(0)
 
-    # Auto-generate content if writing python/code file and content is empty
-    if ("write" in target_tool or routing.next_node == "synthex") and not content:
-        if file_path.endswith(".py"):
-            content = "print('hello world')\n"
-        else:
-            content = f"# Generated content for {file_path}\n"
-
     # Auto-generate command if executing command and command is empty
     if ("execute" in target_tool or "test" in target_tool or routing.next_node == "validator") and not command:
         if file_path:
