@@ -15,7 +15,8 @@ if "llama-3.3-70b-versatile" in _model or "llama-3.1" in _model or "llama3" in _
 llm = ChatGroq(
     api_key=_active_key,
     model=_model,
-    temperature=0
+    temperature=0,
+    max_tokens=750,
 )
 
 
