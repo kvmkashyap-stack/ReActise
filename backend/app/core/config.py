@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
 
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "qwen/qwen3.8-27b"
 
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
