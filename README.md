@@ -1,625 +1,157 @@
 # ⚡ ReActise
 
-> **A ReAct-powered multi-agent AI developer companion for planning, reasoning, acting, and shipping faster.**
-
-**ReActise** is an **agentic AI developer platform built around the ReAct (Reason + Act) paradigm**.
-
-Instead of simply generating text, ReActise can **reason about a user's request, determine the required actions, select specialized agents and tools, execute those actions, verify the results, and return a contextual response**.
-
-The platform brings multiple specialized AI capabilities into **one unified conversational interface**, powered by a ReAct Supervisor and three specialist agents:
-
-* ✨ **Nexus** — General AI Assistant
-* 🌿 **Octolyzer** — GitHub Intelligence
-* 💻 **Synthex** — Code Synthesis
-
-The user stays in **one continuous chat**, while ReActise dynamically determines which specialist should handle each turn.
+> **A State-Aware ReAct Multi-Agent Platform for Autonomous Software Engineering, Dynamic Planning, Real Code Execution, and Self-Correction.**
 
 ---
 
-# 🧠 The Core: ReAct
+## 📌 Executive Summary
 
-## **ReAct = Reason + Act**
+**ReActise** is an enterprise-grade agentic AI platform built on top of **LangGraph**, **LangChain**, and **FastAPI**. Moving beyond simple prompt-response loops, ReActise implements a **State-Aware Supervisor Paradigm** that dynamically decomposes user requests into explicit execution plans, delegates subtasks to specialist agents, executes real workspace test commands, observes runtime outputs, and autonomously **re-plans and self-corrects** upon failure.
 
-The central idea behind ReActise is the **ReAct agentic paradigm**.
+---
 
-Instead of following a simple:
+## 🧠 Core Architecture: State-Aware Supervisor Pattern
+
+Instead of static sequential routing, ReActise operates on a cyclic **StateGraph** coordinated by an LLM-driven Supervisor.
 
 ```text
-User → LLM → Response
-```
-
-workflow, ReActise follows:
-
-```text
-User Request
-     ↓
-   Reason
-     ↓
- Determine Action
-     ↓
- Select Agent / Tool
-     ↓
-     Act
-     ↓
- Observe Result
-     ↓
- Verify
-     ↓
-   Respond
-```
-
-This allows ReActise to move beyond conversational AI toward **action-oriented agentic workflows**.
-
----
-
-# 🤖 Multi-Agent System
-
-ReActise uses a **Supervisor / Router architecture** to coordinate multiple specialized agents.
-
-```text
-                         ┌──────────────────────┐
-                         │       ReActise       │
-                         │   ReAct Supervisor   │
-                         └──────────┬───────────┘
-                                    │
-                              User Request
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Task Analysis &    │
-                         │   Agent Routing      │
-                         └──────────┬───────────┘
-                                    │
-              ┌─────────────────────┼─────────────────────┐
-              │                     │                     │
-              ▼                     ▼                     ▼
-        ✨ Nexus              🌿 Octolyzer           💻 Synthex
-      General Agent          GitHub Agent            Code Agent
-              │                     │                     │
-              └─────────────────────┼─────────────────────┘
-                                    ▼
-                            Unified Response
-```
-
-The system can also identify when a request contains **multiple tasks or dependencies** and coordinate the required agents accordingly.
-
----
-
-# ✨ Specialist Agents
-
-## ✨ Nexus — General AI Agent
-
-Nexus is the general-purpose AI specialist.
-
-It handles tasks such as:
-
-* General questions
-* Technical explanations
-* Programming concepts
-* Developer assistance
-* Conceptual reasoning
-* General conversational requests
-
-Nexus also provides a fast path for simple queries and greetings that do not require the complete agentic workflow.
-
----
-
-## 🌿 Octolyzer — GitHub Intelligence Agent
-
-Octolyzer specializes in **GitHub and repository-level intelligence**.
-
-It can:
-
-* Clone repositories
-* Index repository directories
-* Read repository files
-* Perform repository-level RAG lookups
-* Retrieve relevant code and project context
-* Analyze project structures
-* Work with GitHub-related tasks
-
-Repository retrieval also includes a fallback mechanism that can download repository ZIP files when the local environment does not have Git CLI support.
-
----
-
-## 💻 Synthex — Code Synthesis Agent
-
-Synthex is the code-focused specialist responsible for **code generation, modification, and validation workflows**.
-
-It can:
-
-* Analyze source code
-* Generate code
-* Edit code files
-* Work with repository code
-* Validate compilation states
-* Assist with implementation and debugging workflows
-
-Synthex allows ReActise to move from **understanding a coding problem to taking action on the codebase**.
-
----
-
-# 🔄 One Chat, Multiple Agents
-
-ReActise intentionally uses **one continuous conversation** instead of creating separate chat interfaces for each specialist.
-
-For example:
-
-```text
-User:
-"Check my GitHub repository and find the authentication issue."
-
-        ↓
-
-🌿 Octolyzer
-Analyzes the repository
-        ↓
-
-User:
-"Now fix that function."
-
-        ↓
-
-💻 Synthex
-Works on the relevant code
-        ↓
-
-User:
-"Explain why the original implementation failed."
-
-        ↓
-
-✨ Nexus
-Explains the underlying concept
-```
-
-All of these interactions remain within the **same conversation thread**.
-
-The UI dynamically displays the active specialist for each turn.
-
----
-
-# 🧩 Agentic Task Orchestration
-
-ReActise can decompose complex requests into individual tasks and determine how they should be executed.
-
-For example:
-
-```text
-User Request
-     │
-     ▼
-Task Decomposition
-     │
-     ├── Analyze Repository
-     │          ↓
-     │      Octolyzer
-     │
-     └── Fix Identified Code
-                ↓
-             Synthex
-```
-
-When tasks are independent, ReActise can execute them **in parallel** to reduce unnecessary latency.
-
-When tasks depend on previous results, the system can execute them as a **dependency chain**.
-
----
-
-# ⚡ Performance & Optimization
-
-ReActise contains several mechanisms designed to reduce unnecessary processing and improve response speed.
-
-### Fast-Path Bypass
-
-Simple conceptual questions and greetings can bypass the full graph workflow and receive responses rapidly.
-
-### Parallel Execution
-
-Independent operations such as:
-
-* Web search
-* GitHub cloning
-* RAG retrieval
-
-can be executed concurrently using a thread pool.
-
-### Token Optimization
-
-Conversation context is limited to the **most recent four messages** to reduce unnecessary token usage and prevent context growth from degrading performance.
-
----
-
-# 📡 Real-Time Agent Execution
-
-ReActise uses **Server-Sent Events (SSE)** to stream execution progress to the frontend.
-
-Instead of waiting silently for the final response, the user can see what the system is doing.
-
-Example:
-
-```text
-⟳ Understanding request...
-✓ Task identified
-⟳ Cloning repository...
-✓ Repository cloned
-⟳ Reading relevant files...
-✓ Files retrieved
-⟳ Analyzing code...
-✓ Analysis completed
-```
-
-The final response is then streamed with a smooth typing experience.
-
-This makes the agent's actions more transparent to the user.
-
----
-
-# 🔍 ReAct Verification Audit
-
-For tool-based agent tasks, ReActise provides a **Verification Audit** section in the interface.
-
-The audit gives additional visibility into the agent's execution and verification process.
-
-```text
-User Request
-     ↓
-Reason
-     ↓
-Tool / Agent Action
-     ↓
-Observation
-     ↓
-Verification
-     ↓
-Final Response
-```
-
-This helps distinguish an action-oriented agent workflow from a standard LLM response.
-
----
-
-# 📚 RAG & Document Intelligence
-
-ReActise includes document-based retrieval capabilities.
-
-Users can upload PDF documents directly through the sidebar.
-
-The document workflow supports:
-
-```text
-PDF Upload
-    ↓
-Document Processing
-    ↓
-Indexing
-    ↓
-Vector Retrieval
-    ↓
-Relevant Context
-    ↓
-Agent Response
-```
-
-The system can use **Supabase / pgvector** for persistent vector storage and includes a **local FAISS fallback** when the remote vector infrastructure is unavailable.
-
-Users can also:
-
-* Upload documents
-* View indexed documents
-* Track document status
-* Delete documents from the registry
-
----
-
-# 🛡️ Resilient Infrastructure
-
-ReActise includes fallback mechanisms to keep development and execution workflows resilient.
-
-### Local FAISS Fallback
-
-If Supabase or pgvector is unavailable, the system can automatically initialize an in-memory FAISS vector database.
-
-```text
-Supabase / pgvector
-        │
-        ├── Available → Use persistent vector store
-        │
-        └── Offline
-              ↓
-          Local FAISS
-```
-
-### Git Repository Fallback
-
-If Git CLI is unavailable, the system can retrieve repositories through HTTP-based ZIP downloads.
-
-```text
-Git CLI
-  │
-  ├── Available → Clone Repository
-  │
-  └── Unavailable
-          ↓
-      ZIP Download
+                               ┌───────────────────────────┐
+                               │       User Request        │
+                               └─────────────┬─────────────┘
+                                             │
+                                             ▼
+                               ┌───────────────────────────┐
+                               │       Master Planner      │
+                               │  (Generates Explicit Plan)│
+                               └─────────────┬─────────────┘
+                                             │
+                                             ▼
+                               ┌───────────────────────────┐
+                        ┌─────►│  State-Aware Supervisor   │◄────┐
+                        │      │  (Inspects State & Steps) │     │
+                        │      └─────────────┬─────────────┘     │
+                        │                    │                   │
+                        │      Dynamic Routing Decision          │
+                        │                    │                   │
+         ┌──────────────┼──────────────┬─────┴────────┬──────────┼──────────────┐
+         ▼              ▼              ▼              ▼          ▼              ▼
+   ✨ Nexus       🌿 Octolyzer   💻 Synthex     🧪 Validator  🔄 Re-Planner 🎯 Evaluator
+ (Knowledge)      (GitHub/RAG)   (Code Edit)   (Exec Cmd)    (Update Plan) (Checklist)
+         │              │              │              │          │              │
+         └──────────────┴──────────────┴──────────────┴──────────┴──────────────┘
+                                             │
+                                   Return Control to State
 ```
 
 ---
 
-# 🎨 User Interface
+## 🚀 Key Architectural Features & Upgrades
 
-ReActise provides a developer-focused interface designed around a unified AI workspace.
+### 1. 📋 Explicit Dynamic Planner Node
+- Decomposes the user's task into a structured plan consisting of numbered steps, task descriptions, initial `"pending"` status, step dependencies (`depends_on`), and suggested tools.
+- Generated dynamically from the user's prompt rather than hardcoded rules.
 
-### Interface Features
-
-* 🌑 Dark developer-oriented UI
-* ✨ Specialized agent identities
-* 💬 Single persistent chat interface
-* 🔄 Same-chat agent switching
-* 📡 Real-time SSE execution traces
-* 🧠 Agent verification audits
-* 📁 Document management sidebar
-* 📄 PDF uploads
-* 🗑️ Document deletion
-* 📝 Chat history
-* ⚡ Fast-path responses
-* ⌨️ Auto-growing prompt textarea
-* `Enter` to submit
-* `Shift + Enter` for new lines
-* 🎨 Dynamic agent avatars and themes
-
----
-
-# 🎭 Dynamic Agent Identity
-
-Each specialist has its own visual identity.
-
-```text
-✨ Nexus
-General AI
-Purple / Sparkles
-
-🌿 Octolyzer
-GitHub Intelligence
-Amber / GitBranch
-
-💻 Synthex
-Code Intelligence
-Emerald / Code
+### 2. 🗂️ Upgraded Shared LangGraph State (`AgentState`)
+The system maintains a rich, persistent state across the entire trajectory:
+```python
+class AgentState(TypedDict):
+    user_goal: str
+    plan: List[Dict[str, Any]]
+    current_step: int
+    active_agent: str
+    selected_tool: str
+    observations: List[str]
+    tool_results: List[Dict[str, Any]]
+    completed_steps: List[int]
+    failed_steps: List[int]
+    verification_result: str
+    retry_count: int
+    final_response: str
+    execution_log: List[Dict[str, Any]]
 ```
 
-The active agent's name, description, avatar, and visual theme can change **turn-by-turn without leaving the conversation**.
+### 3. 🎯 State-Aware Supervisor Routing
+- Evaluates `current_step`, `plan`, `observations`, and `retry_count` on every cycle.
+- Dynamically selects which specialist node (`nexus`, `octolyzer`, `synthex`, `validator`, `planner`, `evaluator`) and tool parameters (`file_path`, `content`, `command`) to invoke.
+
+### 4. 🧰 Dynamic Tool Selection
+- Agents select tools dynamically based on goal requirements:
+  - **Octolyzer:** `github`, `list_files`, `read_file`
+  - **Synthex:** `write_file`, `check_syntax`
+  - **Validator:** `execute_command` (real command execution)
+  - **Nexus:** `web_search`, `rag`, `report`, `answer`
+
+### 5. 💻 Real Code & Test Execution
+- Implements `execute_workspace_command` using `subprocess.run`.
+- Executes test commands (`pytest`, `python -m unittest`, `npm test`) inside isolated workspace directories.
+- Captures `stdout`, `stderr`, `exit_code`, and `success` status as structured JSON for agent inspection.
+
+### 6. 🔄 Executable Re-Plan & Self-Correction Loop
+- If code execution or validation fails, the Supervisor routes control back to the **Planner**.
+- The Planner inspects the failure traceback in `observations` and modifies/appends new steps to fix dependencies, modify code, and re-run tests until success is achieved.
+
+### 7. 🛡️ Retry Guards & Safety Limits
+- Built-in `MAX_RETRIES = 3` counter prevents infinite execution loops.
+- If retries exceed the limit, execution safely terminates and routes to the Evaluator with a detailed failure report.
+
+### 8. 📊 Task Completion Evaluator
+- Prior to final output, the **Evaluator Node** inspects all completed and failed steps.
+- Generates a structured response containing a completed objectives checklist `[x]`, summary, and verification status.
+
+### 9. 📝 Comprehensive ReAct Verification Audit Log
+- Formats every step in the trajectory showing:
+  - **STEP:** Step index & task
+  - **ACTION:** Agent & tool invoked
+  - **OBSERVATION:** Output/Traceback returned
+  - **DECISION:** State decision (PENDING/COMPLETED/FAILED)
+  - **VERIFICATION:** SUCCESS / FAILED status
 
 ---
 
-# 🏗️ High-Level Architecture
+## 🤖 Multi-Agent Specialist Roles
 
-```text
-                         ┌───────────────────────┐
-                         │       Next.js         │
-                         │       Frontend        │
-                         └───────────┬───────────┘
-                                     │
-                              SSE / API Requests
-                                     │
-                                     ▼
-                         ┌───────────────────────┐
-                         │       FastAPI         │
-                         │       Backend         │
-                         └───────────┬───────────┘
-                                     │
-                                     ▼
-                         ┌───────────────────────┐
-                         │    ReAct Supervisor   │
-                         │     / Task Router     │
-                         └───────────┬───────────┘
-                                     │
-              ┌──────────────────────┼──────────────────────┐
-              │                      │                      │
-              ▼                      ▼                      ▼
-        ✨ Nexus               🌿 Octolyzer           💻 Synthex
-       General AI             GitHub Intelligence     Code Synthesis
-              │                      │                      │
-              └──────────────────────┼──────────────────────┘
-                                     │
-                    ┌────────────────┼────────────────┐
-                    │                │                │
-                    ▼                ▼                ▼
-                Web Tools       GitHub Tools       RAG / FAISS
-                                                     │
-                                                     ▼
-                                                  Documents
+| Agent | Icon | Role & Specialty | Tools |
+| :--- | :---: | :--- | :--- |
+| **Nexus** | ✨ | General Reasoning, Search & Q&A | `web_search`, `rag`, `report`, `answer` |
+| **Octolyzer** | 🌿 | GitHub Intelligence & File Inspection | `github`, `list_files`, `read_file` |
+| **Synthex** | 💻 | Code Synthesis & AST Validation | `write_file`, `check_syntax` |
+| **Validator** | 🧪 | Runtime Command & Test Execution | `execute_workspace_command` |
+| **Planner** | 📋 | Step Decomposition & Re-Planning | `ExplicitPlanResponse` |
+| **Evaluator** | 🎯 | Completion Verification & Audit | `CompletionEvaluation` |
+
+---
+
+## 🛠️ Technology Stack
+
+- **Frontend:** Next.js 16 (React 19), Tailwind CSS, Lucide Icons, Server-Sent Events (SSE)
+- **Backend:** FastAPI, Python 3.12, Pydantic v2
+- **Agent Framework:** LangGraph, LangChain
+- **LLM Engine:** Groq API (`qwen/qwen3.8-27b`)
+- **Vector DB / Storage:** Supabase (pgvector), FAISS (Local Fallback)
+- **Code Workspace:** Subprocess Execution Engine, AST Parser
+
+---
+
+## 🏃 Quickstart Guide
+
+### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
----
-
-# 🛠️ Technology Stack
-
-## Frontend
-
-* **Next.js**
-* React
-* Server-Sent Events
-* Modern responsive UI
-
-## Backend
-
-* **FastAPI**
-* Python
-
-## Agentic AI
-
-* **LangGraph**
-* **LangChain**
-* ReAct architecture
-* Multi-agent orchestration
-
-## LLM
-
-* **Groq Models**
-
-## Retrieval & Vector Storage
-
-* **Supabase**
-* **pgvector**
-* **FAISS fallback**
-
-## Integrations
-
-* GitHub
-* Web search
-* PDF/document processing
-
----
-
-# 📂 Core System Capabilities
-
-| Capability         | Purpose                                                   |
-| ------------------ | --------------------------------------------------------- |
-| ReAct Supervisor   | Reason about requests and coordinate execution            |
-| Task Router        | Select appropriate specialist agents                      |
-| Nexus              | General AI assistance                                     |
-| Octolyzer          | GitHub repository intelligence                            |
-| Synthex            | Code synthesis and modification                           |
-| Parallel Execution | Execute independent actions concurrently                  |
-| Fast Path          | Bypass unnecessary agent graph execution                  |
-| RAG                | Retrieve relevant document context                        |
-| FAISS Fallback     | Local vector retrieval when remote storage is unavailable |
-| Git ZIP Fallback   | Repository retrieval without Git CLI                      |
-| SSE Streaming      | Real-time execution updates                               |
-| Verification Audit | Display verification information                          |
-| Document Manager   | Upload, index, view, and delete documents                 |
-| Token Optimizer    | Limit conversation context                                |
-
----
-
-# 🔄 End-to-End ReAct Workflow
-
-```text
-                         USER
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   REASON    │
-                    │ Understand  │
-                    │   Request   │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   PLAN      │
-                    │ Decompose   │
-                    │   Tasks     │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │    ACT      │
-                    │ Agents/Tools│
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  OBSERVE    │
-                    │ Tool Results│
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   VERIFY    │
-                    │ Audit Result│
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │   RESPOND   │
-                    │ Final Answer│
-                    └─────────────┘
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-# 🎯 Why ReActise?
-
-Traditional AI assistants primarily follow:
-
-```text
-Question → Answer
-```
-
-ReActise is designed around:
-
-```text
-Question
-   ↓
-Reason
-   ↓
-Plan
-   ↓
-Act
-   ↓
-Observe
-   ↓
-Verify
-   ↓
-Answer
-```
-
-This makes the platform suitable for **developer workflows where the AI needs to interact with repositories, documents, tools, and code rather than simply generate text**.
-
----
-
-# 🚀 Use Cases
-
-ReActise can assist developers with:
-
-* Understanding programming concepts
-* Debugging code
-* Analyzing GitHub repositories
-* Exploring project structures
-* Retrieving information from documents
-* Performing repository-level analysis
-* Generating and modifying code
-* Validating code changes
-* Combining multiple development tasks in a single conversation
-
----
-
-# 🔮 Future Scope
-
-Potential extensions include:
-
-* More specialized developer agents
-* GitHub issue and pull-request automation
-* Automated code review
-* Multi-repository reasoning
-* Agent memory improvements
-* Advanced planning graphs
-* Persistent workspace environments
-* Automated test execution
-* Deployment assistance
-* More development tool integrations
-
----
-
-# ⚠️ Responsible AI
-
-ReActise is an AI-assisted developer tool.
-
-Generated code and automated actions should be **reviewed and tested by the user before being deployed to production environments**.
-
-Users remain responsible for reviewing repository changes, executing generated code safely, and protecting sensitive credentials and source code.
-
----
-
-# 👨‍💻 Project
-
-**ReActise**
-
-> **Reason. Act. Observe. Verify. Ship.**
-
-A **ReAct-powered multi-agent AI developer companion** combining specialized agents, tool execution, GitHub intelligence, code synthesis, RAG, real-time streaming, and verification into one conversational workspace.
-
-### Built With
-
-**Next.js · FastAPI · LangGraph · LangChain · Groq · Supabase · FAISS · GitHub**
+## 📄 License
+Distributed under the MIT License.
